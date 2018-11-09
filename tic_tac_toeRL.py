@@ -5,15 +5,16 @@ from enum import IntEnum
 # import sys
 # import os.path
 import os
-host_name = os.getenv('HOSTNAME')
-#host_name = host_name.lower()
+import socket
+host_name = socket.gethostname()
+
 
 in_dimension = 3
 in_win_row_len = 3
 in_batch_count = 200
 
 in_flat_dimension = in_dimension * in_dimension
-in_save_file_name = 'tictactoe'+host_name+'_SS'
+in_save_file_name = 'tictactoe_'+str(host_name)+'_'
 in_save_file_name += str(in_dimension) + str(in_win_row_len)
 in_learning_rate = 0.00001  # successfull batch=200 lr=0.0003 for relu-sigmoid
 in_learning_rate_discount = 0.99
@@ -41,12 +42,13 @@ class NeuralNet(nn.Module):
             , nn.Sigmoid()
         ).to(device)
         self.marker_char = marker_char
+        self.abbr = 'SS'
 
     def forward(self, x):
         return self.net(x)
 
     def get_file_name(self):
-        return in_save_file_name + '(' + self.marker_char + ')'
+        return in_save_file_name + '_'+self.abbr + '_(' + self.marker_char + ')'
 
     def save(self, count=None):
         try:
