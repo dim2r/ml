@@ -30,6 +30,7 @@ class NeuralNet(nn.Module):
     def __init__(self, dimension, marker_char):
         super(NeuralNet, self).__init__()
         flatdimension = dimension * dimension
+        self.abbr = 'SS'
         self.net = nn.Sequential(
             nn.Linear(flatdimension, flatdimension)
             , nn.Sigmoid()
@@ -41,7 +42,6 @@ class NeuralNet(nn.Module):
             , nn.Sigmoid()
         ).to(device)
         self.marker_char = marker_char
-        self.abbr = 'SS'
 
     def forward(self, x):
         return self.net(x)
@@ -609,43 +609,37 @@ def play(board, agent1, agent2, do_print=True):
     agent1.exit = False
     agent2.exit = False
     while board.can_make_turn():
-        if do_print:
-            board.print()
 
         if agent1.marker == current_marker:
-            agent = agent1
+            current_agent = agent1
         else:
-            agent = agent2
+            current_agent = agent2
 
         if do_print:
-            print(agent.__class__.__name__ + " is putting " + board.markerToChar(current_marker) + ':')
+            board.print()
+            print(current_agent.__class__.__name__ + " is putting " + board.markerToChar(current_marker) + ':')
 
-        agent.make_move()#
+        current_agent.make_move()  ##########################################
 
-        if agent.exit:
+        if current_agent.exit:
             return
 
-        state, x, y = board.board_state()#
+        state, x, y = board.board_state()  ##########################################
 
-        if state == BoardState.X_win or state == BoardState.O_win:#
-            if agent1.marker == state:
-                agent1.win_count += 1
-            if agent2.marker == state:
-                agent2.win_count += 1
+        if state == BoardState.X_win or state == BoardState.O_win:  ##########################################
+            current_agent.win_count += 1
 
             if do_print:
                 board.print()
-                print(agent.__class__.__name__)
-            return state#
-            break
+                print(current_agent.__class__.__name__)
+            return state  ##########################################
 
         if state == BoardState.DRAW:
             agent1.draw_count += 1
             agent2.draw_count += 1
             if do_print:
                 board.print()
-            return state#
-            break
+            return state  ##########################################
 
         current_marker = board.another_marker(current_marker)
 
@@ -817,22 +811,16 @@ def train_and_save_best_NNvsNN():
         print('learning ' + str(in_dimension) + 'x' + str(in_dimension) + ' row len=' + str(in_win_row_len))
         for epoch in range(100):
 
-            learning_rate *= in_learning_rate_discount
-
             neural_net_player_agent1.init_statistics()
             neural_net_player_agent2.init_statistics()
             neural_net_player_agent1.neural_net.save()
             neural_net_player_agent2.neural_net.save()
-            for i in range(in_batch_count):
-                play(board, neural_net_player_agent1, neural_net_player_agent2)
 
-            win_count1 = neural_net_player_agent1.win_count
-            win_count2 = neural_net_player_agent2.win_count
-            draw_count = neural_net_player_agent1.draw_count
+            for i in range(in_batch_count):  # play without learning
+                play(board, neural_net_player_agent1, neural_net_player_agent2, False)
 
-            if epoch == 0:
-                who_is_learning = neural_net_player_agent1
-            elif neural_net_player_agent1.win_count < neural_net_player_agent2.win_count and np.random.random_sample() > 0.2:
+
+            if neural_net_player_agent1.win_count < neural_net_player_agent2.win_count and np.random.random_sample() > 0.2:
                 who_is_learning = neural_net_player_agent1
             elif neural_net_player_agent1.win_count > neural_net_player_agent2.win_count and np.random.random_sample() > 0.2:
                 who_is_learning = neural_net_player_agent2
@@ -841,15 +829,11 @@ def train_and_save_best_NNvsNN():
             else:
                 who_is_learning = neural_net_player_agent2
 
-            neural_net_player_agent1.init_statistics()
-            neural_net_player_agent2.init_statistics()
+            prev_win_count = who_is_learning.win_count
+            prev_draw_count = who_is_learning.draw_count
+
 
             learning_rate = in_learning_rate
-            # learning_rate = in_learning_rate * np.random.random_sample() * 10
-            # if np.random.random_sample() > 0.9:
-            #     learning_rate = in_learning_rate * 100
-            # if np.random.random_sample() > 0.99:
-            #     learning_rate = in_learning_rate * 1000
 
             who_is_learning.optimizer = torch.optim.Adam(who_is_learning.neural_net.parameters(),
                                                          lr=learning_rate)
@@ -861,7 +845,10 @@ def train_and_save_best_NNvsNN():
             else:
                 who_is_learning.curiosity = 0.00
 
-            for i in range(in_batch_count):
+            neural_net_player_agent1.init_statistics()
+            neural_net_player_agent2.init_statistics()
+
+            for i in range(in_batch_count):  # play and learn one agent
                 episode_no += 1
 
                 board.reset()
@@ -871,11 +858,10 @@ def train_and_save_best_NNvsNN():
 
                 while board.can_make_turn():
 
-                    if board.can_make_turn():
-                        if neural_net_player_agent1.marker == current_marker:
-                            neural_net_player_agent1.make_move()
-                        else:
-                            neural_net_player_agent2.make_move()
+                    if neural_net_player_agent1.marker == current_marker:
+                        neural_net_player_agent1.make_move()
+                    else:
+                        neural_net_player_agent2.make_move()
 
                     if i == in_batch_count - 1:
                         try:
@@ -920,10 +906,19 @@ def train_and_save_best_NNvsNN():
 
                     current_marker = board.another_marker(current_marker)
 
-            who_is_learning.neural_net.save()
+
+            if who_is_learning.win_count > prev_win_count:
+                sss='sav'+board.markerToChar(who_is_learning.marker)
+                who_is_learning.neural_net.save()
+            elif who_is_learning.draw_count > prev_draw_count:
+                sss='sav'+board.markerToChar(who_is_learning.marker)
+                who_is_learning.neural_net.save()
+            else:
+                sss='load'+board.markerToChar(who_is_learning.marker)
+                who_is_learning.neural_net.load()#restore from prev checkpoint
 
             print(
-                '{:>6} learn={}  {} win_count={:<3} DRAW_count={:<3} {} win_count={:<3} (learning_rate={:.10f}) {}/{} {}/{}'.format(
+                '{:>6} learn={}  {} win_count={:<3} DRAW_count={:<3} {} win_count={:<3} (learning_rate={:.10f}) {}/{} {}/{} {}'.format(
                     episode_no,
                     board.markerToChar(who_is_learning.marker),
                     board.markerToChar(neural_net_player_agent1.marker),
@@ -937,7 +932,7 @@ def train_and_save_best_NNvsNN():
                     neural_net_player_agent1.random_move_count,
                     neural_net_player_agent2.move_count,
                     neural_net_player_agent2.random_move_count
-
+                    ,sss
                 ))
 
 
