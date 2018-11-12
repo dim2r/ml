@@ -912,7 +912,7 @@ def train_and_save_best_NNvsNN():
 
                     current_marker = board.another_marker(current_marker)
 
-
+            sss=''
             if who_is_learning.win_count > prev_win_count:
                 sss='sav'+board.markerToChar(who_is_learning.marker)
                 who_is_learning.neural_net.save()
@@ -920,11 +920,11 @@ def train_and_save_best_NNvsNN():
             #    sss='sav'+board.markerToChar(who_is_learning.marker)
             #    who_is_learning.neural_net.save()
             else:
-                sss='load'+board.markerToChar(who_is_learning.marker)
+                #sss='load'+board.markerToChar(who_is_learning.marker)
                 who_is_learning.neural_net.load()#restore from prev checkpoint
 
             print(
-                '{:>6} learn={}  {} win_count={:<3}{:+d} DRAW_count={:<3}{:+d} {} win_count={:<3}{:+d} (learning_rate={:.10f}) {}/{} {}/{} {}'.format(
+                '{:>6} learn={}  {} win_count={:<3}{:+3d} DRAW_count={:<3}{:+3d} {} win_count={:<3}{:+3d} (learning_rate={:.10f}) {}/{} {}/{} {}'.format(
                     episode_no,
                     board.markerToChar(who_is_learning.marker),
                     board.markerToChar(neural_net_player_agent1.marker),
