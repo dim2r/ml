@@ -829,11 +829,17 @@ def train_and_save_best_NNvsNN():
             else:
                 who_is_learning = neural_net_player_agent2
 
+            prev_win_count1 = neural_net_player_agent1.win_count
+            prev_win_count2 = neural_net_player_agent2.win_count
             prev_win_count = who_is_learning.win_count
             prev_draw_count = who_is_learning.draw_count
 
 
-            learning_rate = in_learning_rate
+            learning_rate = in_learning_rate * np.random.random_sample()
+            if np.random.random_sample()<0.10:
+                learning_rate *=100
+            if np.random.random_sample()<0.10:
+                learning_rate *=500
 
             who_is_learning.optimizer = torch.optim.Adam(who_is_learning.neural_net.parameters(),
                                                          lr=learning_rate)
@@ -910,24 +916,26 @@ def train_and_save_best_NNvsNN():
             if who_is_learning.win_count > prev_win_count:
                 sss='sav'+board.markerToChar(who_is_learning.marker)
                 who_is_learning.neural_net.save()
-            elif who_is_learning.draw_count > prev_draw_count:
-                sss='sav'+board.markerToChar(who_is_learning.marker)
-                who_is_learning.neural_net.save()
+            #elif who_is_learning.draw_count > prev_draw_count:
+            #    sss='sav'+board.markerToChar(who_is_learning.marker)
+            #    who_is_learning.neural_net.save()
             else:
                 sss='load'+board.markerToChar(who_is_learning.marker)
                 who_is_learning.neural_net.load()#restore from prev checkpoint
 
             print(
-                '{:>6} learn={}  {} win_count={:<3} DRAW_count={:<3} {} win_count={:<3} (learning_rate={:.10f}) {}/{} {}/{} {}'.format(
+                '{:>6} learn={}  {} win_count={:<3}{:+d} DRAW_count={:<3}{:+d} {} win_count={:<3}{:+d} (learning_rate={:.10f}) {}/{} {}/{} {}'.format(
                     episode_no,
                     board.markerToChar(who_is_learning.marker),
                     board.markerToChar(neural_net_player_agent1.marker),
-                    neural_net_player_agent1.win_count,
-                    neural_net_player_agent1.draw_count,
+                    prev_win_count1,
+                    neural_net_player_agent1.win_count-prev_win_count1,
+                    prev_draw_count,
+                    neural_net_player_agent1.draw_count-prev_draw_count,
                     board.markerToChar(neural_net_player_agent2.marker),
-                    neural_net_player_agent2.win_count,
+                    prev_win_count2,
+                    neural_net_player_agent2.win_count-prev_win_count2,
                     learning_rate,
-
                     neural_net_player_agent1.move_count,
                     neural_net_player_agent1.random_move_count,
                     neural_net_player_agent2.move_count,
