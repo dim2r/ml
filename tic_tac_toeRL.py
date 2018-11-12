@@ -6,21 +6,20 @@ from enum import IntEnum
 # import os.path
 import os
 import socket
-host_name = socket.gethostname()
 
+host_name = socket.gethostname()
 
 in_dimension = 3
 in_win_row_len = 3
 in_batch_count = 200
 
 in_flat_dimension = in_dimension * in_dimension
-in_save_file_name = 'tictactoe_'+str(host_name)+'_'
+in_save_file_name = 'tictactoe_' + str(host_name) + '_'
 in_save_file_name += str(in_dimension) + str(in_win_row_len)
 in_learning_rate = 0.00001  # successfull batch=200 lr=0.0003 for relu-sigmoid
 in_learning_rate_discount = 0.99
 
 in_episode_move_discount = 1
-
 
 device = torch.device('cpu')
 if torch.cuda.is_available():
@@ -48,7 +47,7 @@ class NeuralNet(nn.Module):
         return self.net(x)
 
     def get_file_name(self):
-        return in_save_file_name + '_'+self.abbr + '_(' + self.marker_char + ')'
+        return in_save_file_name + '_' + self.abbr + '_(' + self.marker_char + ')'
 
     def save(self, count=None):
         try:
@@ -604,34 +603,48 @@ class NeuralNetPlayerAgent(PlayerAgent):
             self.random_move_count += 1
 
 
-def play(board, agent1, agent2):
+def play(board, agent1, agent2, do_print=True):
     board.reset()
     current_marker = CellState.X
     agent1.exit = False
     agent2.exit = False
     while board.can_make_turn():
-        board.print()
+        if do_print:
+            board.print()
 
         if agent1.marker == current_marker:
             agent = agent1
         else:
             agent = agent2
 
-        print(agent.__class__.__name__ + " is putting " + board.markerToChar(current_marker) + ':')
-        agent.make_move()
+        if do_print:
+            print(agent.__class__.__name__ + " is putting " + board.markerToChar(current_marker) + ':')
+
+        agent.make_move()#
+
         if agent.exit:
             return
 
-        state, x, y = board.board_state()
+        state, x, y = board.board_state()#
 
-        if state == BoardState.X_win or state == BoardState.O_win:
-            board.print()
-            print(agent.__class__.__name__)
-            return state
+        if state == BoardState.X_win or state == BoardState.O_win:#
+            if agent1.marker == state:
+                agent1.win_count += 1
+            if agent2.marker == state:
+                agent2.win_count += 1
+
+            if do_print:
+                board.print()
+                print(agent.__class__.__name__)
+            return state#
             break
+
         if state == BoardState.DRAW:
-            board.print()
-            return state
+            agent1.draw_count += 1
+            agent2.draw_count += 1
+            if do_print:
+                board.print()
+            return state#
             break
 
         current_marker = board.another_marker(current_marker)
@@ -805,6 +818,17 @@ def train_and_save_best_NNvsNN():
         for epoch in range(100):
 
             learning_rate *= in_learning_rate_discount
+
+            neural_net_player_agent1.init_statistics()
+            neural_net_player_agent2.init_statistics()
+            neural_net_player_agent1.neural_net.save()
+            neural_net_player_agent2.neural_net.save()
+            for i in range(in_batch_count):
+                play(board, neural_net_player_agent1, neural_net_player_agent2)
+
+            win_count1 = neural_net_player_agent1.win_count
+            win_count2 = neural_net_player_agent2.win_count
+            draw_count = neural_net_player_agent1.draw_count
 
             if epoch == 0:
                 who_is_learning = neural_net_player_agent1
