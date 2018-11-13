@@ -11,7 +11,7 @@ host_name = socket.gethostname()
 
 in_dimension = 3
 in_win_row_len = 3
-in_batch_count = 200
+in_batch_count = 400
 
 in_flat_dimension = in_dimension * in_dimension
 in_save_file_name = 'tictactoe_' + str(host_name) + '_'
@@ -30,15 +30,15 @@ class NeuralNet(nn.Module):
     def __init__(self, dimension, marker_char):
         super(NeuralNet, self).__init__()
         flatdimension = dimension * dimension
-        self.abbr = 'SS'
+        self.abbr = 'SSS'
         self.net = nn.Sequential(
-            nn.Linear(flatdimension, flatdimension)
+            nn.Linear(flatdimension, flatdimension, bias=False)
+            , nn.Sigmoid()
+            , nn.Linear(flatdimension, flatdimension, bias=False)
             , nn.Sigmoid()
             # , nn.Linear(flatdimension, flatdimension)
-            # , nn.Sigmoid()
-            # , nn.Linear(flatdimension, flatdimension)
             # , nn.LeakyReLU()
-            , nn.Linear(flatdimension, flatdimension)
+            , nn.Linear(flatdimension, flatdimension, bias=False)
             , nn.Sigmoid()
         ).to(device)
         self.marker_char = marker_char
@@ -819,7 +819,6 @@ def train_and_save_best_NNvsNN():
             for i in range(in_batch_count):  # play without learning
                 play(board, neural_net_player_agent1, neural_net_player_agent2, False)
 
-
             if neural_net_player_agent1.win_count < neural_net_player_agent2.win_count and np.random.random_sample() > 0.2:
                 who_is_learning = neural_net_player_agent1
             elif neural_net_player_agent1.win_count > neural_net_player_agent2.win_count and np.random.random_sample() > 0.2:
@@ -834,12 +833,11 @@ def train_and_save_best_NNvsNN():
             prev_win_count = who_is_learning.win_count
             prev_draw_count = who_is_learning.draw_count
 
-
             learning_rate = in_learning_rate * np.random.random_sample()
-            if np.random.random_sample()<0.10:
-                learning_rate *=100
-            if np.random.random_sample()<0.10:
-                learning_rate *=500
+            if np.random.random_sample() < 0.10:
+                learning_rate *= 100
+            if np.random.random_sample() < 0.10:
+                learning_rate *= 500
 
             who_is_learning.optimizer = torch.optim.Adam(who_is_learning.neural_net.parameters(),
                                                          lr=learning_rate)
@@ -912,16 +910,16 @@ def train_and_save_best_NNvsNN():
 
                     current_marker = board.another_marker(current_marker)
 
-            sss=''
+            sss = ''
             if who_is_learning.win_count > prev_win_count:
-                sss='sav'+board.markerToChar(who_is_learning.marker)
+                sss = 'sav' + board.markerToChar(who_is_learning.marker)
                 who_is_learning.neural_net.save()
-            #elif who_is_learning.draw_count > prev_draw_count:
+            # elif who_is_learning.draw_count > prev_draw_count:
             #    sss='sav'+board.markerToChar(who_is_learning.marker)
             #    who_is_learning.neural_net.save()
             else:
-                #sss='load'+board.markerToChar(who_is_learning.marker)
-                who_is_learning.neural_net.load()#restore from prev checkpoint
+                # sss='load'+board.markerToChar(who_is_learning.marker)
+                who_is_learning.neural_net.load()  # restore from prev checkpoint
 
             print(
                 '{:>6} learn={}  {} win_count={:<3}{:+3d} DRAW_count={:<3}{:+3d} {} win_count={:<3}{:+3d} (learning_rate={:.10f}) {}/{} {}/{} {}'.format(
@@ -929,18 +927,18 @@ def train_and_save_best_NNvsNN():
                     board.markerToChar(who_is_learning.marker),
                     board.markerToChar(neural_net_player_agent1.marker),
                     prev_win_count1,
-                    neural_net_player_agent1.win_count-prev_win_count1,
+                    neural_net_player_agent1.win_count - prev_win_count1,
                     prev_draw_count,
-                    neural_net_player_agent1.draw_count-prev_draw_count,
+                    neural_net_player_agent1.draw_count - prev_draw_count,
                     board.markerToChar(neural_net_player_agent2.marker),
                     prev_win_count2,
-                    neural_net_player_agent2.win_count-prev_win_count2,
+                    neural_net_player_agent2.win_count - prev_win_count2,
                     learning_rate,
                     neural_net_player_agent1.move_count,
                     neural_net_player_agent1.random_move_count,
                     neural_net_player_agent2.move_count,
                     neural_net_player_agent2.random_move_count
-                    ,sss
+                    , sss
                 ))
 
 
