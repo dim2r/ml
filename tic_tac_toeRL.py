@@ -16,7 +16,7 @@ in_batch_count = 400
 in_flat_dimension = in_dimension * in_dimension
 in_save_file_name = 'tictactoe_' + str(host_name) + '_'
 in_save_file_name += str(in_dimension) + str(in_win_row_len)
-in_learning_rate = 0.00001  # successfull batch=200 lr=0.0003 for relu-sigmoid
+in_learning_rate = 0.0003  # successfull batch=200 lr=0.0003 for relu-sigmoid
 in_learning_rate_discount = 0.99
 
 in_episode_move_discount = 1
@@ -42,6 +42,8 @@ class NeuralNet(nn.Module):
             , nn.Sigmoid()
         ).to(device)
         self.marker_char = marker_char
+        self.save_count=0
+        self.load_count=0
 
     def forward(self, x):
         return self.net(x)
@@ -52,6 +54,8 @@ class NeuralNet(nn.Module):
     def save(self, count=None):
         try:
             torch.save(self.state_dict(), self.get_file_name())
+            self.save_count+=1
+            self.load_count=0
         except:
             pass
         if not count is None:
@@ -62,7 +66,7 @@ class NeuralNet(nn.Module):
 
     def load(self):
         self.load_state_dict(torch.load(self.get_file_name()))
-
+        self.load_count+=1
 
 class CellState(IntEnum):
     EMPTY = 0
@@ -787,7 +791,7 @@ def train_and_save_best_NNvsNN():
     board = Board(in_dimension, in_win_row_len)
 
     neural_net_player_agent1 = NeuralNetPlayerAgent(board, CellState.X)
-    neural_net_player_agent1.stochastic_move = True
+    neural_net_player_agent1.stochastic_move = False
 
     try:
         neural_net_player_agent1.neural_net.load()
@@ -796,7 +800,7 @@ def train_and_save_best_NNvsNN():
         pass
 
     neural_net_player_agent2 = NeuralNetPlayerAgent(board, CellState.O)
-    neural_net_player_agent2.stochastic_move = True
+    neural_net_player_agent2.stochastic_move = False
     try:
         neural_net_player_agent2.neural_net.load()
         print('loaded "' + neural_net_player_agent2.neural_net.get_file_name() + '"')
@@ -816,8 +820,10 @@ def train_and_save_best_NNvsNN():
             neural_net_player_agent1.neural_net.save()
             neural_net_player_agent2.neural_net.save()
 
+            ########################################################
             for i in range(in_batch_count):  # play without learning
                 play(board, neural_net_player_agent1, neural_net_player_agent2, False)
+            ########################################################
 
             if neural_net_player_agent1.win_count < neural_net_player_agent2.win_count and np.random.random_sample() > 0.2:
                 who_is_learning = neural_net_player_agent1
@@ -833,6 +839,16 @@ def train_and_save_best_NNvsNN():
             prev_win_count = who_is_learning.win_count
             prev_draw_count = who_is_learning.draw_count
 
+            is_new_net = ''
+            if np.random.random_sample() > who_is_learning.win_count / in_batch_count and  np.random.random_sample()<0.02 and who_is_learning.neural_net.load_count>100:
+                if who_is_learning == neural_net_player_agent1:
+                    neural_net_player_agent1 = NeuralNetPlayerAgent(board, neural_net_player_agent1.marker)
+                    who_is_learning = neural_net_player_agent1
+                else:
+                    neural_net_player_agent2 = NeuralNetPlayerAgent(board, neural_net_player_agent2.marker)
+                    who_is_learning = neural_net_player_agent2
+                is_new_net=' new '
+
             learning_rate = in_learning_rate * np.random.random_sample()
             if np.random.random_sample() < 0.10:
                 learning_rate *= 100
@@ -844,7 +860,7 @@ def train_and_save_best_NNvsNN():
 
             neural_net_player_agent1.curiosity = 0.00
             neural_net_player_agent2.curiosity = 0.00
-            if np.random.random_sample() > 0.5:
+            if np.random.random_sample() > 0.50:
                 who_is_learning.curiosity = 0.50
             else:
                 who_is_learning.curiosity = 0.00
@@ -852,6 +868,7 @@ def train_and_save_best_NNvsNN():
             neural_net_player_agent1.init_statistics()
             neural_net_player_agent2.init_statistics()
 
+            ###########################################################
             for i in range(in_batch_count):  # play and learn one agent
                 episode_no += 1
 
@@ -912,7 +929,7 @@ def train_and_save_best_NNvsNN():
 
             sss = ''
             if who_is_learning.win_count > prev_win_count:
-                sss = 'sav' + board.markerToChar(who_is_learning.marker)
+                sss = 'save' + board.markerToChar(who_is_learning.marker)+is_new_net
                 who_is_learning.neural_net.save()
             # elif who_is_learning.draw_count > prev_draw_count:
             #    sss='sav'+board.markerToChar(who_is_learning.marker)
@@ -921,18 +938,29 @@ def train_and_save_best_NNvsNN():
                 # sss='load'+board.markerToChar(who_is_learning.marker)
                 who_is_learning.neural_net.load()  # restore from prev checkpoint
 
+            sss_mrk1 = ''
+            sss_mrk2 = ''
+            if who_is_learning.marker == CellState.X:
+                sss_mrk1 = '*'
+                sss_mrk2 = ' '
+            else:
+                sss_mrk1 = ' '
+                sss_mrk2 = '*'
+
             print(
-                '{:>6} learn={}  {} win_count={:<3}{:+3d} DRAW_count={:<3}{:+3d} {} win_count={:<3}{:+3d} (learning_rate={:.10f}) {}/{} {}/{} {}'.format(
+                '{:>6} learn={}  {} win_count={:<3}{:<+4d}{} DRAW_count={:<3}{:<+4d} {} win_count={:<3}{:<+4d}{} (learning_rate={:.10f}) {}/{} {}/{} {}'.format(
                     episode_no,
                     board.markerToChar(who_is_learning.marker),
                     board.markerToChar(neural_net_player_agent1.marker),
                     prev_win_count1,
                     neural_net_player_agent1.win_count - prev_win_count1,
+                    sss_mrk1,
                     prev_draw_count,
                     neural_net_player_agent1.draw_count - prev_draw_count,
                     board.markerToChar(neural_net_player_agent2.marker),
                     prev_win_count2,
                     neural_net_player_agent2.win_count - prev_win_count2,
+                    sss_mrk2,
                     learning_rate,
                     neural_net_player_agent1.move_count,
                     neural_net_player_agent1.random_move_count,
