@@ -32,18 +32,18 @@ class NeuralNet(nn.Module):
         flatdimension = dimension * dimension
         self.abbr = 'SSS'
         self.net = nn.Sequential(
-            nn.Linear(flatdimension, flatdimension, bias=False)
+            nn.Linear(flatdimension, flatdimension, bias=True)
             , nn.Sigmoid()
-            , nn.Linear(flatdimension, flatdimension, bias=False)
+            , nn.Linear(flatdimension, flatdimension, bias=True)
             , nn.Sigmoid()
             # , nn.Linear(flatdimension, flatdimension)
             # , nn.LeakyReLU()
-            , nn.Linear(flatdimension, flatdimension, bias=False)
+            , nn.Linear(flatdimension, flatdimension, bias=True)
             , nn.Sigmoid()
         ).to(device)
         self.marker_char = marker_char
-        self.save_count=0
-        self.load_count=0
+        self.save_count = 0
+        self.load_count = 0
 
     def forward(self, x):
         return self.net(x)
@@ -54,8 +54,8 @@ class NeuralNet(nn.Module):
     def save(self, count=None):
         try:
             torch.save(self.state_dict(), self.get_file_name())
-            self.save_count+=1
-            self.load_count=0
+            self.save_count += 1
+            self.load_count = 0
         except:
             pass
         if not count is None:
@@ -64,9 +64,13 @@ class NeuralNet(nn.Module):
             except:
                 pass
 
-    def load(self):
-        self.load_state_dict(torch.load(self.get_file_name()))
-        self.load_count+=1
+    def load(self, filename=None):
+        if filename is None:
+            self.load_state_dict(torch.load(self.get_file_name()))
+        else:
+            self.load_state_dict(torch.load(filename))
+        self.load_count += 1
+
 
 class CellState(IntEnum):
     EMPTY = 0
@@ -682,7 +686,7 @@ def train_and_save_best_NNvsBot():
     neural_net_player_agent = NeuralNetPlayerAgent(board, CellState.X)
     try:
         neural_net_player_agent.neural_net.load()
-        print('loaded "' + in_save_file_name + '"')
+        print('loaded "' + neural_net_player_agent.neural_net.get_file_name()+ '"')
     except:
         pass
 
@@ -766,11 +770,6 @@ def train_and_save_best_NNvsBot():
                         neural_net_player_agent = NeuralNetPlayerAgent(board, CellState.X)
                         sss = 'try new net '
 
-                learning_rate = in_learning_rate * np.random.random_sample() * 10
-                if np.random.random_sample() > 0.9:
-                    learning_rate = in_learning_rate * 100
-                if np.random.random_sample() > 0.99:
-                    learning_rate = in_learning_rate * 1000
 
             print(
                 '{:>6} X_win_count={:<3} DRAW_count={:<3} O_win_count={:<3} (learning_rate={:.10f}) (max win+draw={}) {}'.format(
@@ -781,6 +780,12 @@ def train_and_save_best_NNvsBot():
                     learning_rate,
                     max_OK_game_count,
                     sss))
+
+            learning_rate = in_learning_rate * np.random.random_sample() * 10
+            if np.random.random_sample() > 0.9:
+                learning_rate = in_learning_rate * 100
+            if np.random.random_sample() > 0.99:
+                learning_rate = in_learning_rate * 1000
 
             X_win_count = 0
             O_win_count = 0
@@ -840,14 +845,14 @@ def train_and_save_best_NNvsNN():
             prev_draw_count = who_is_learning.draw_count
 
             is_new_net = ''
-            if np.random.random_sample() > who_is_learning.win_count / in_batch_count and  np.random.random_sample()<0.02 and who_is_learning.neural_net.load_count>100:
+            if np.random.random_sample() > who_is_learning.win_count / in_batch_count and np.random.random_sample() < 0.02 and who_is_learning.neural_net.load_count > 100:
                 if who_is_learning == neural_net_player_agent1:
                     neural_net_player_agent1 = NeuralNetPlayerAgent(board, neural_net_player_agent1.marker)
                     who_is_learning = neural_net_player_agent1
                 else:
                     neural_net_player_agent2 = NeuralNetPlayerAgent(board, neural_net_player_agent2.marker)
                     who_is_learning = neural_net_player_agent2
-                is_new_net=' new '
+                is_new_net = ' new '
 
             learning_rate = in_learning_rate * np.random.random_sample()
             if np.random.random_sample() < 0.10:
@@ -929,7 +934,7 @@ def train_and_save_best_NNvsNN():
 
             sss = ''
             if who_is_learning.win_count > prev_win_count:
-                sss = 'save' + board.markerToChar(who_is_learning.marker)+is_new_net
+                sss = 'save' + board.markerToChar(who_is_learning.marker) + is_new_net
                 who_is_learning.neural_net.save()
             # elif who_is_learning.draw_count > prev_draw_count:
             #    sss='sav'+board.markerToChar(who_is_learning.marker)
@@ -971,6 +976,7 @@ def train_and_save_best_NNvsNN():
 
 
 def load_and_play():
+    filename = input('Enter file name:')
     while True:
         print('-----start a game------')
         board = Board(in_dimension, in_win_row_len)
@@ -980,8 +986,8 @@ def load_and_play():
         neural_net_player_agent = NeuralNetPlayerAgent(board, CellState.X)
 
         try:
-            neural_net_player_agent.neural_net.load()
-            print('loaded ' + in_save_file_name)
+            neural_net_player_agent.neural_net.load(filename)
+            print('loaded ' + filename)
         except:
             pass
 
@@ -998,9 +1004,9 @@ if __name__ == "__main__":
 
     print("""
     Menu:
-    1-train NN-vs-Bot and save the best neural network configuration {}x{} {}  
+    1-train NN-vs-Bot and save the best neural network configuration {}x{} {}. NN=X,Bot=O  
     2-train NN-vs-NN and save the best neural network configuration {}x{} {}
-    3-load neural network configuration and play '{}'
+    3-load neural network configuration and play '{}' NN=X,You=O
     4-play with Bot agent
     """.format(in_dimension, in_dimension, in_win_row_len, in_dimension, in_dimension, in_win_row_len,
                in_save_file_name))
