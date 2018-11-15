@@ -11,7 +11,7 @@ host_name = socket.gethostname()
 
 in_dimension = 3
 in_win_row_len = 3
-in_batch_count = 400
+in_batch_count = 200
 
 in_flat_dimension = in_dimension * in_dimension
 in_save_file_name = 'tictactoe_' + str(host_name) + '_'
@@ -30,12 +30,12 @@ class NeuralNet(nn.Module):
     def __init__(self, dimension, marker_char):
         super(NeuralNet, self).__init__()
         flatdimension = dimension * dimension
-        self.abbr = 'SSS'
+        self.abbr = 'SS'
         self.net = nn.Sequential(
             nn.Linear(flatdimension, flatdimension, bias=True)
             , nn.Sigmoid()
-            , nn.Linear(flatdimension, flatdimension, bias=True)
-            , nn.Sigmoid()
+            #, nn.Linear(flatdimension, flatdimension, bias=True)
+            #, nn.Sigmoid()
             # , nn.Linear(flatdimension, flatdimension)
             # , nn.LeakyReLU()
             , nn.Linear(flatdimension, flatdimension, bias=True)
@@ -547,12 +547,13 @@ class NeuralNetPlayerAgent(PlayerAgent):
                 add_transformed(self.board.flip2, board_data_orig, my_move_orig)
                 add_transformed(self.board.flip3, board_data_orig, my_move_orig)
 
+            self.optimizer.zero_grad()
             input = torch.tensor(data_augmented_batch, dtype=torch.float, device=device)
             output = self.neural_net(input)
             labels = torch.tensor(my_move_augmented_batch, dtype=torch.long, device=device)
             loss = discount * reward_value * self.criterion(output, labels)
             loss.backward()
-        self.optimizer.step()
+            self.optimizer.step()
 
         discount *= discount
 
@@ -695,6 +696,7 @@ def train_and_save_best_NNvsBot():
     learning_rate = in_learning_rate
     max_OK_game_count = 0
     episode_no = 0
+    learning_rate = in_learning_rate
 
     while True:
         print('learning ' + str(in_dimension) + 'x' + str(in_dimension) + ' row len=' + str(in_win_row_len))
@@ -704,7 +706,6 @@ def train_and_save_best_NNvsBot():
         load_count = 0
         for epoch in range(100):
 
-            learning_rate *= in_learning_rate_discount
             neural_net_player_agent.optimizer = torch.optim.Adam(neural_net_player_agent.neural_net.parameters(),
                                                                  lr=learning_rate)
 
@@ -769,7 +770,6 @@ def train_and_save_best_NNvsBot():
                     except:
                         neural_net_player_agent = NeuralNetPlayerAgent(board, CellState.X)
                         sss = 'try new net '
-
 
             print(
                 '{:>6} X_win_count={:<3} DRAW_count={:<3} O_win_count={:<3} (learning_rate={:.10f}) (max win+draw={}) {}'.format(
