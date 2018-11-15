@@ -13,6 +13,9 @@ in_dimension = 3
 in_win_row_len = 3
 in_batch_count = 200
 
+in_neural_net_input_frames=1 #or 2
+in_neural_net_use_bias = True
+
 in_flat_dimension = in_dimension * in_dimension
 in_save_file_name = 'tictactoe_' + str(host_name) + '_'
 in_save_file_name += str(in_dimension) + str(in_win_row_len)
@@ -29,21 +32,24 @@ if torch.cuda.is_available():
 class NeuralNet(nn.Module):
     def __init__(self, dimension, marker_char):
         super(NeuralNet, self).__init__()
+
         flatdimension = dimension * dimension
-        self.abbr = 'SS'
         self.net = nn.Sequential(
-            nn.Linear(flatdimension, flatdimension, bias=True)
+            nn.Linear(in_neural_net_input_frames*flatdimension, in_neural_net_input_frames*flatdimension, bias=in_neural_net_use_bias)
             , nn.Sigmoid()
-            #, nn.Linear(flatdimension, flatdimension, bias=True)
+            #, nn.Linear(flatdimension, flatdimension, bias=in_neural_net_use_bias)
             #, nn.Sigmoid()
-            # , nn.Linear(flatdimension, flatdimension)
+            # , nn.Linear(flatdimension, flatdimension, bias=in_neural_net_use_bias)
             # , nn.LeakyReLU()
-            , nn.Linear(flatdimension, flatdimension, bias=True)
+            , nn.Linear(in_neural_net_input_frames*flatdimension, flatdimension, bias=in_neural_net_use_bias)
             , nn.Sigmoid()
         ).to(device)
         self.marker_char = marker_char
         self.save_count = 0
         self.load_count = 0
+        self.abbr = 'SS'
+        if in_neural_net_input_frames>1:
+            self.abbr += '(frames'+str(in_neural_net_input_frames)+')'
 
     def forward(self, x):
         return self.net(x)
@@ -772,7 +778,7 @@ def train_and_save_best_NNvsBot():
                         sss = 'try new net '
 
             print(
-                '{:>6} X_win_count={:<3} DRAW_count={:<3} O_win_count={:<3} (learning_rate={:.10f}) (max win+draw={}) {}'.format(
+                '{:>6} X_win_count={:<3} DRAW_count={:<3} O_win_count={:<3} (learning_rate={:.10f}) (max Xwin+draw={}) {}'.format(
                     episode_no,
                     X_win_count,
                     DRAW_count,
@@ -1006,10 +1012,10 @@ if __name__ == "__main__":
     Menu:
     1-train NN-vs-Bot and save the best neural network configuration {}x{} {}. NN=X,Bot=O  
     2-train NN-vs-NN and save the best neural network configuration {}x{} {}
-    3-load neural network configuration and play '{}' NN=X,You=O
+    3-load neural network configuration and play  NN=X,You=O
     4-play with Bot agent
-    """.format(in_dimension, in_dimension, in_win_row_len, in_dimension, in_dimension, in_win_row_len,
-               in_save_file_name))
+    """.format(in_dimension, in_dimension, in_win_row_len, in_dimension, in_dimension, in_win_row_len
+               ))
 
     choise = input(":")[0:1]
 
