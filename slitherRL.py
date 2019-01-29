@@ -115,6 +115,11 @@ class Board():
         self.cells = [[0 for x in range(dimension)] for y in range(dimension)]
         self.creatures = []
         self.creature_count = 0
+        for i in range(self.dimension):
+            self.cells[i][0]=CellState.OBSTACLE
+            self.cells[0][i]=CellState.OBSTACLE
+            self.cells[i][dimension-1]=CellState.OBSTACLE
+            self.cells[dimension-1][i]=CellState.OBSTACLE
 
     def is_inside(self,x,y):
         return x>=0 and x<self.dimension and y>=0 and y<self.dimension
@@ -189,6 +194,16 @@ class Board():
                                         )
                                      )  # end rect
 
+        for c in self.creatures:
+            x,y = c.get_head()
+            pygame.draw.rect(windowSurface
+                             ,   Color.WHITE
+                             , (DrawOptions.border + x * DrawOptions.cell_size + 4
+                                , DrawOptions.border + y * DrawOptions.cell_size + 4
+                                , DrawOptions.cell_size - 7
+                                , DrawOptions.cell_size - 7
+                                )
+                             )  # end rect
         # end for i,j
         # end draw
 
@@ -196,7 +211,7 @@ class Board():
 def MAIN_PYGAME():
     board = Board(30, 0.1)
     draw_len = DrawOptions.cell_size * board.dimension + DrawOptions.border * 2
-    board.add_creatures(10)
+    board.add_creatures(11)
     board.add_meal(333)
 
     pygame.init()
