@@ -31,8 +31,8 @@ class CreatureAction():
     RIGHT = (+1, 0)
     ALL_MOVES = (UP, DOWN, LEFT, RIGHT)
     @staticmethod
-    def random_move():
-        i = np.random.randint(0, 3)
+    def random_direction():
+        i = np.random.randint(0, 4)
         return CreatureAction.ALL_MOVES[i]
 
 
@@ -69,6 +69,9 @@ class Creature():
 
     def can_move(self,direction):
         x,y = self.get_head()
+        x += direction[0]
+        y += direction[1]
+
         if x>=0 and x<self.board.dimension and y>=0 and y<self.board.dimension and self.board.cells[x][y]==CellState.EMPTY:
             return True
         else:
@@ -88,8 +91,19 @@ class Creature():
             del self.cells[-1]
 
     def random_move(self):
-        dir = CreatureAction.random_move()
+        dir = CreatureAction.random_direction()
         self.move(dir)
+
+    def random_bite(self):
+        x,y = self.get_head()
+
+        direction = CreatureAction.random_direction()
+        x += direction[0]
+        y += direction[1]
+
+        if self.board.is_inside(x,y) and self.board.cells[x][y]==CellState.MEAL:
+            self.cells.insert(0,[x,y])
+            self.board.cells[x][y]=self.id
 
 
 
@@ -101,6 +115,9 @@ class Board():
         self.cells = [[0 for x in range(dimension)] for y in range(dimension)]
         self.creatures = []
         self.creature_count = 0
+
+    def is_inside(self,x,y):
+        return x>=0 and x<self.dimension and y>=0 and y<self.dimension
 
     def add_creatures(self, count):
         for i in range(count):
@@ -132,6 +149,7 @@ class Board():
     def step(self):
         for c in self.creatures:
             c.random_move()
+            c.random_bite ()
 
     def draw(self, windowSurface):
         for i in range(self.dimension + 1):
@@ -155,6 +173,7 @@ class Board():
                 color = None
                 if self.cells[x][y] > 0:
                     color = Color.CREATURE
+
                 if self.cells[x][y] == CellState.OBSTACLE:
                     color = Color.BLACK
                 if self.cells[x][y] == CellState.MEAL:
@@ -178,7 +197,7 @@ def MAIN_PYGAME():
     board = Board(30, 0.1)
     draw_len = DrawOptions.cell_size * board.dimension + DrawOptions.border * 2
     board.add_creatures(10)
-    board.add_meal(10)
+    board.add_meal(333)
 
     pygame.init()
 
