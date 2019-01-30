@@ -209,7 +209,7 @@ class Board():
 
 
 def MAIN_PYGAME():
-    board = Board(30, 0.1)
+    board = Board(50, 0.1)
     draw_len = DrawOptions.cell_size * board.dimension + DrawOptions.border * 2
     board.add_creatures(11)
     board.add_meal(333)
@@ -226,12 +226,15 @@ def MAIN_PYGAME():
     board.draw(windowSurface)
     pygame.display.update()
 
+    MOVEEVENT, t = pygame.USEREVENT+1, 2
+    pygame.time.set_timer(MOVEEVENT, t)
+
     while True:
         for event in pygame.event.get():
             if event.type == QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == pygame.KEYDOWN:
+            elif event.type == pygame.KEYDOWN or  event.type == MOVEEVENT:
                 board.step()
                 windowSurface.fill(Color.WHITE)
                 board.draw(windowSurface)
