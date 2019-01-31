@@ -47,7 +47,7 @@ class Color():
     RED = (255, 0, 0)
     GREEN = (0, 255, 0)
     BLUE = (0, 0, 255)
-    CREATURE = (200, 100, 100)
+    CREATURE = (200, 70, 70)
     DEAD = (150, 80, 80)
 
 
