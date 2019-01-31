@@ -9,6 +9,7 @@ class CellState():
     MEAL = -2
     ANOTHER_CREATURE = -3
     MY_CREATURE = -4
+    DEAD = -5
 
 
 class CreatureAction():
@@ -30,6 +31,9 @@ class CreatureAction():
     LEFT = (-1, 0)
     RIGHT = (+1, 0)
     ALL_MOVES = (UP, DOWN, LEFT, RIGHT)
+
+    ALL_DIRECTIONS = ( (-1,-1),(0,-1),(1,-1), (-1,0),(1,0),  (-1,1),(0,1),(1,1) ) #(0,0) excluded
+
     @staticmethod
     def random_direction():
         i = np.random.randint(0, 4)
@@ -44,11 +48,13 @@ class Color():
     GREEN = (0, 255, 0)
     BLUE = (0, 0, 255)
     CREATURE = (200, 100, 100)
+    DEAD = (150, 80, 80)
+
 
 
 class DrawOptions():
     border = 30
-    cell_size = 20
+    cell_size = 13
 
 
 class Creature():
@@ -101,10 +107,43 @@ class Creature():
         x += direction[0]
         y += direction[1]
 
-        if self.board.is_inside(x,y) and self.board.cells[x][y]==CellState.MEAL:
+        if self.board.is_inside(x,y) and (self.board.cells[x][y]==CellState.MEAL or self.board.cells[x][y]==CellState.DEAD):
             self.cells.insert(0,[x,y])
             self.board.cells[x][y]=self.id
+            return
 
+        if self.board.is_inside(x,y) and self.board.cells[x][y]>0:
+            id=self.board.cells[x][y]
+            if self.id!=id or np.random.randint(0, 100)<3:
+                for c in self.board.creatures:
+
+                    if c.id == id and len(c.cells)>3:
+                        cut_i = -1
+
+                        for i in range(2,len(c.cells)):
+                            cell_x  =c.cells[i][0]
+                            cell_y = c.cells[i][1]
+                            if cell_x==x and cell_y==y:
+                                cut_i=i
+
+
+                            if cut_i>0:
+                                self.board.cells[cell_x][cell_y] = CellState.DEAD
+                        #end for
+                        if cut_i>=0:
+                            c.cells = c.cells[:(cut_i)]
+
+
+
+    def get_sensor_data(self):
+        pass
+        # radii_start=1
+        # super_cell_size = 1
+        # for radii_level in range(1,3):
+        #     for dir in CreatureAction.ALL_DIRECTIONS:
+        #         for dx in range(radii_start,radii_start+super_cell_size-1)
+        #             for dy in range(radii_start,radii_start+super_cell_size-1)
+        # super_cell_size  = super_cell_size * 2
 
 
 class Board():
@@ -183,6 +222,8 @@ class Board():
                     color = Color.BLACK
                 if self.cells[x][y] == CellState.MEAL:
                     color = Color.GREEN
+                if self.cells[x][y] == CellState.DEAD:
+                    color = Color.DEAD
 
                 if color is not None:
                     pygame.draw.rect(windowSurface
@@ -211,7 +252,7 @@ class Board():
 def MAIN_PYGAME():
     board = Board(50, 0.1)
     draw_len = DrawOptions.cell_size * board.dimension + DrawOptions.border * 2
-    board.add_creatures(11)
+    board.add_creatures(5)
     board.add_meal(333)
 
     pygame.init()
@@ -226,7 +267,7 @@ def MAIN_PYGAME():
     board.draw(windowSurface)
     pygame.display.update()
 
-    MOVEEVENT, t = pygame.USEREVENT+1, 2
+    MOVEEVENT, t = pygame.USEREVENT+1, 20
     pygame.time.set_timer(MOVEEVENT, t)
 
     while True:
@@ -235,10 +276,12 @@ def MAIN_PYGAME():
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.KEYDOWN or  event.type == MOVEEVENT:
+                pygame.event.clear()
                 board.step()
                 windowSurface.fill(Color.WHITE)
                 board.draw(windowSurface)
                 pygame.display.update()
+                pygame.event.clear()
 
 
 if __name__ == "__main__":
