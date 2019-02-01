@@ -1,6 +1,6 @@
-import pygame, sys
-from pygame.locals import *
-import numpy as np
+import  pygame, sys
+from    pygame.locals import *
+import  numpy as np
 
 
 class CellState():
@@ -8,8 +8,10 @@ class CellState():
     OBSTACLE = -1
     MEAL = -2
     ANOTHER_CREATURE = -3
-    MY_CREATURE = -4
-    DEAD = -5
+    ANOTHER_CREATURE_HEAD = -4
+    MY_CREATURE = -5
+    DEAD = -6
+    OUTSIDE = -100
 
 
 class CreatureAction():
@@ -136,7 +138,18 @@ class Creature():
 
 
     def get_sensor_data(self):
-        pass
+
+        head = self.get_head()
+
+        for dx in range(-2,2):
+            for dy in range(-2,2):
+                if not(dx==0 and dy==0):
+                    x=head[0]+dx
+                    y=head[0]+dy
+
+
+
+        # pass
         # radii_start=1
         # super_cell_size = 1
         # for radii_level in range(1,3):
@@ -194,6 +207,22 @@ class Board():
         for c in self.creatures:
             c.random_move()
             c.random_bite ()
+
+    def get_cell_type(self,x,y, my_id):
+        if not self.is_inside(x,y):
+            return CellState.OBSTACLE
+
+        else:
+            c = self.cells[x][y]
+            if c>0 and c==my_id:
+                return CellState.MY_CREATURE
+            if c>0 and c!=my_id:
+                return CellState.ANOTHER_CREATURE
+            if c==CellState.DEAD or c==CellState.DEAD:
+                return CellState.MEAL
+        return CellState.OBSTACLE
+
+
 
     def draw(self, windowSurface):
         for i in range(self.dimension + 1):
